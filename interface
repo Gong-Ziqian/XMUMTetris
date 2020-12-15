@@ -6,241 +6,261 @@ using namespace std;
 
 class Interface {
 public:
-    Interface();
-    void initialWindow(HANDLE hOut); //initialize the window
-    void initialInterface(HANDLE hOut); //print the initial interface
-    void gotoXY(HANDLE hOut, int x, int y); //get the position of cursor
-    void printBlock(HANDLE hOut, int block[4][4], int x, int y); //print the blocks
-    void clearBlock(HANDLE hOut, int block[4][4], int x, int y); //delete the blocks
-    void gamePause(HANDLE hOut, int block[4][4]); //pause the game
-    void gameOver(HANDLE hOut, int block[4][4], int map[21][12]); //game over
-    void eliminateRow(HANDLE hOut, int map[21][12], int &val, int &fraction, int &checkpoint);//determine whether or not the rows can be eliminated and update the scores
-
+    Interface(); //get the output handle
+    void initialWindow(); //initialize the window
+    void initialCovor(); //draw the initial interface
+    void getName(); //enter the player's name
+    void gameResult(string name,int score); //game result
+    void initialViewOnePlayer(); //initialize map
+    void printPointPlayer1(int point); //show the player's score
+    void printNamePlayer1(string name); //show the player's name
+    void gotoXY(int x, int y); //locate the cursor
+    void drawNextBlock1(Block t); //draw the next block
+    void drawNowBlock1(Block t,int x,int y); //draw the current block
+    void deleteBlock1(); //delete the block
+    void refreshBlock1(int x,int y,Block temp); //refresh the block
+    void clearMap1(int map[20][10]); //clear the map
+    void printMap1(int map[20][10]); //print the map
 private:
-    HANDLE hOut; //=GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE hOut;
+    Block tempBlock;
     int x, y;
-    int val, fraction, checkpoint;
-    int blockA[4][4]; //candidate block
-    int blockB[4][4]; //falling block
 };
 
-Interface::Interface(){ //get the output handle
+Interface::Interface()
+{ //get output handle
     hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 }
-
-void Interface::initialWindow(HANDLE hOut)
-{
-    SetConsoleTitle("XMUM Tetris");
-    COORD size = { 80, 25 };
-    SetConsoleScreenBufferSize(hOut, size);
-    SMALL_RECT rc = { 0, 0, 79, 24 };
-    SetConsoleWindowInfo(hOut, true, &rc);
-    CONSOLE_CURSOR_INFO cursor_info = { 1, 0 };
-    SetConsoleCursorInfo(hOut, &cursor_info);
+void Interface::initialWindow(){
+    system("cls"); //clear the screen
+    system("mode con cols=100 lines=30"); //set the size of the window
+    CONSOLE_CURSOR_INFO cursor_info = {1, 0}; //cursor information
+    SetConsoleCursorInfo(hOut, &cursor_info); //set the cursor to be invisible
+    system("title Tetris"); //set the title
 }
 
-void Interface::initialInterface(HANDLE hOut){
-    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); //set the font color and background color of the console window
-    for (int i = 0; i < 20; ++i)
-    {
-        cout << "■                    ■☆                      ☆" << endl;
-    }
-    gotoXY(hOut, 26, 0);
-    cout << "☆☆☆☆☆☆☆☆☆☆☆";
-    gotoXY(hOut, 0, 20);
-    cout << "■■■■■■■■■■■■☆☆☆☆☆☆☆☆☆☆☆☆☆";
-    gotoXY(hOut, 26, 1);
-    cout << "Score:      ";
-    gotoXY(hOut, 26, 2);
-    cout << "Checkpoint:      ";
-    gotoXY(hOut, 26, 4);
-    cout << "Next Block: ";
-    gotoXY(hOut, 26, 9);
-    cout << "Rules: ";
-    gotoXY(hOut, 30, 11);
-    cout << "↑：Rotate";
-    gotoXY(hOut, 30, 12);
-    cout << "↓：Speed up";
-    gotoXY(hOut, 30, 13);
-    cout << "→：Move right";
-    gotoXY(hOut, 30, 14);
-    cout << "←：Move left";
-    gotoXY(hOut, 30, 15);
-    cout << "Space: Pause";
-    gotoXY(hOut, 30, 16);
-    cout << "Esc: Exit";
-    gotoXY(hOut, 26, 17);
-}
-
-void Interface::gotoXY(HANDLE hOut, int x, int y){
+void Interface::gotoXY(int x, int y){
     COORD pos;
     pos.X = x;
     pos.Y = y;
     SetConsoleCursorPosition(hOut, pos); //set the position of the cursor
 }
-
-void Interface::printBlock(HANDLE hOut, int block[4][4], int x, int y)
-{
-    switch (block[0][0])
+void Interface::initialCovor(){
+    SetConsoleTextAttribute(hOut,3);
+    int mark[9][31]={ 0,0,1,1,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,1,0,1,0,0,0,1,0,
+                      0,1,1,0,0,1,0,1,0,0,0,0,1,0,1,0,1,0,1,0,0,0,1,1,1,1,1,0,1,0,0,
+                      0,0,1,0,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,1,0,1,0,1,1,1,1,
+                      1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,1,0,1,0,1,0,
+                      0,0,1,0,0,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,0,1,0,1,0,1,0,
+                      0,0,1,1,0,1,0,1,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,1,1,1,0,1,0,1,0,
+                      1,1,1,0,0,0,1,0,0,0,0,1,1,0,1,0,1,1,0,0,0,0,0,1,0,1,0,1,0,1,0,
+                      0,1,1,0,0,1,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,1,1,0,1,0,
+                      0,0,1,0,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0};
+    for(int i=0; i<9; i++)
     {
-    case 10:
-    case 11:
-        SetConsoleTextAttribute(hOut, FOREGROUND_GREEN); //set the color of the "bar" block
-        break;
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-        SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        break;
-    case 16:
-    case 17:
-    case 18:
-    case 19:
-        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        break;
-    case 20:
-    case 21:
-    case 22:
-    case 23:
-        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        break;
-    case 24:
-    case 25:
-        SetConsoleTextAttribute(hOut, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-        break;
-    case 26:
-    case 27:
-        SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
-        break;
-    case 28:
-        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
-        break;
-    default:
-        break;
-    }
-    for (int i = 0; i < 4; ++i)
-    {
-        if (i + x >= 0)
+        gotoXY(18, i+5);
+        for(int j=0; j<31; j++)
         {
-            for (int j = 0; j < 4; ++j)
-            {
-                if (block[i][j] == 1)
-                {
+            if(mark[i][j]==1)
+                cout<<"■";
+            else
+                cout << "  ";
+        }
+        cout << endl;
+    }
+    SetConsoleTextAttribute(hOut,14);
+    gotoXY(36,20);
+    cout<<"Press any key to start... ";
+    gotoXY(36,21);
+    system("pause");
+}
 
-                    gotoXY(hOut, 2 * (y + j), x + i);
-                    cout << "¡ö";
-                }
+void Interface::getName(){
+    gotoXY(23,20);
+    cout<<"                           ";
+    gotoXY(23,22);
+    cout<<"                           ";
+    gotoXY(60,18);
+    cout<<"              ";
+    gotoXY(60,24);
+    cout<<"              ";
+    gotoXY(23,20);
+    SetConsoleTextAttribute(hOut,14);
+    cout<<"Enter your name:";
+    SetConsoleTextAttribute(hOut,15);
+    gotoXY(36,21);
+    cout<<"■■■■■■■■■■■■"<<endl;
+    gotoXY(36,20);
+    cout<<"                          ";
+    gotoXY(36,20);
+    CONSOLE_CURSOR_INFO cursor_info = {100,1}; //cursor information
+    SetConsoleCursorInfo(hOut,&cursor_info); //set the cursor to be visible
+}
+
+void Interface::gameResult(string name,int score){
+    SetConsoleTextAttribute(hOut,14|32|64|128);
+        gotoXY(21,5);
+        for(int i=0;i<50;i++) cout<<" ";
+        for(int i=0;i<15;i++){
+            gotoXY(21,i+5);
+            cout<<"  ";
+        }
+        for(int i=0;i<15;i++){
+            gotoXY(71,i+5);
+            cout<<"  ";
+        }
+        gotoXY(21,19);
+        for(int i=0;i<50;i++) cout<<" ";
+        SetConsoleTextAttribute(hOut,0);
+        for(int i=1;i<14;i++){
+            gotoXY(23,i+5);
+            for(int j=0;j<48;j++){
+                cout<<" ";
+            }
+        }
+        SetConsoleTextAttribute(hOut,15);
+        gotoXY(41,6);
+        cout<<"GAME OVER";
+        gotoXY(30,9);
+        cout<<"Result: ";
+        gotoXY(44,11);
+        cout<<"Player: " << name;
+        gotoXY(44,13);
+        cout<<"Score:  " << score;
+        gotoXY(30,15);
+        cout<<"Play again? ";
+        gotoXY(33,17);
+        cout<<"YES (Y)";
+        gotoXY(48,17);
+        cout<<"NO (N)";
+}
+
+void Interface::initialViewOnePlayer(){
+    system("cls");
+    CONSOLE_CURSOR_INFO cursor_info = {1, 0}; //cursor information
+    SetConsoleCursorInfo(hOut, &cursor_info); //set the cursor to be invisible
+    SetConsoleTextAttribute(hOut,15); //set the color white
+    for(int i=0;i<20;i++)
+    {
+        cout<<"                    ■                    ■" << endl;
+    }
+    gotoXY(0,20);
+    cout << "                    ■■■■■■■■■■■■" << endl;
+    gotoXY(0,0);
+    cout << "■Player: " << endl << endl;
+    cout << "■Score: 0" << endl << endl;
+    cout << "■Next block: " << endl;
+    gotoXY(0,11);
+    SetConsoleTextAttribute(hOut,3);
+    cout << "■Rules: " << endl << endl;
+    cout << "W: Rotate " << endl;
+    cout << "S: Speedup " << endl;
+    cout << "A: Move left " << endl;
+    cout << "D: Move right " << endl;
+    cout << "[Space]: Pause " << endl;
+    gotoXY(0,23);
+}
+
+void Interface::printNamePlayer1(string name)
+{
+    SetConsoleTextAttribute(hOut,15);
+    gotoXY(9,0);
+    cout << name << endl;
+}
+
+void Interface::printPointPlayer1(int point)
+{
+    SetConsoleTextAttribute(hOut,15);
+    gotoXY(8,2);
+    cout << "   " << endl;
+    gotoXY(8,2);
+    cout << point << endl;
+};
+
+void Interface::drawNextBlock1(Block t){
+    for(int i=0; i<4; i++)
+    {
+        gotoXY(2,6+i);
+        for(int j=0; j<4; j++)
+        {
+            cout << "  ";
+        }
+    }
+    SetConsoleTextAttribute(hOut,t.getColor());
+    for(int i=0; i<4; i++)
+    {
+        gotoXY(2,6+i);
+        for(int j=0; j<4; j++)
+        {
+            if(t.block[i][j]==1)
+                cout << "■";
+            else
+                cout << "  ";
+        }
+    }
+};
+
+void Interface::drawNowBlock1(Block t,int x,int y){
+    SetConsoleTextAttribute(hOut,t.getColor());
+    for(int i=0; i<4; i++)
+    {
+        for(int j=0; j<4; j++)
+        {
+            if(t.block[i][j]==1 && x+i>=0)
+            {
+                gotoXY(2*(y+j)+22,x+i);
+                cout << "■";
+            }
+        }
+    }
+};
+
+void Interface::deleteBlock1()
+{
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            if(tempBlock.block[i][j]==1 && x+i>=0)
+            {
+                gotoXY(2*(y+j)+22,x+i);
+                cout << "  ";
+            }
+        }
+    }
+};
+
+void Interface::refreshBlock1(int x0, int y0, Block temp)
+{
+    x = x0;
+    y = y0;
+    tempBlock = temp;
+}
+
+void Interface::printMap1(int map[20][10])
+{
+    SetConsoleTextAttribute(hOut,15);
+    for(int i=0; i<20; i++)
+    {
+        for(int j=0; j<10; j++)
+        {
+            if(map[i][j]==1)
+            {
+                gotoXY(2*j+22,i);
+                cout << "■";
             }
         }
     }
 }
 
-void Interface::clearBlock(HANDLE hOut, int block[4][4], int x, int y)
+void Interface::clearMap1(int map[20][10])
 {
-    for (int i = 0; i < 4; ++i)
+    for(int i=0; i<20; i++)
     {
-        if (i + x >= 0)
+        for(int j=0; j<10; j++)
         {
-            for (int j = 0; j < 4; ++j)
-            {
-                if (block[i][j] == 1)
-                {
-                    gotoXY(hOut, 2 * (y + j), x + i);
-                    cout << "  ";
-                }
-            }
+            gotoXY(2*j+22,i);
+            cout << "  ";
         }
     }
-}
-
-void Interface::gameOver(HANDLE hOut, int block[4][4], int map[21][12])
-{
-    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
-    gotoXY(hOut, 8, 8);
-    cout << "GAME OVER";
-    gotoXY(hOut, 3, 9);
-    cout << "SPACE to play again";
-    gotoXY(hOut, 7, 10);
-    cout << "ESC to exit";
-    char key;
-    while (true)
-    {
-        key = _getch(); //read a character
-        if (key == 32) //space button
-        {
-            return;
-        }
-        if (key == 27) //esc button
-        {
-            exit(0);
-        }
-    }
-}
-
-void Interface::gamePause(HANDLE hOut, int block[4][4])
-{
-    clearBlock(hOut, block, 5, 15);
-    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
-    gotoXY(hOut, 30, 7);
-    cout << "PAUSE";
-    char key;
-    while (true)
-    {
-        key = _getch();
-        if (key == 32)
-        {
-            gotoXY(hOut, 30, 7);
-            cout << "        ";
-            printBlock(hOut, block, 5, 15);
-            return;
-        }
-        if (key == 27)
-        {
-            exit(0);
-        }
-    }
-}
-
-void Interface::eliminateRow(HANDLE hOut, int map[21][12], int &val, int &fraction, int &checkpoint)
-{
-    SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
-    for (int i = 19; i >= 0; --i)
-    {
-        int x = 0;
-        for (int j = 1; j < 11; ++j)
-        {
-            x += map[i][j];
-        }
-        if (x == 10)
-        {
-            fraction += 100;
-            if (val > 1 && fraction / 1000 + 1 != checkpoint)
-            {
-                checkpoint = fraction / 1000 + 1;
-                val -= 5;
-            }
-            for (int m = i; m > 0; --m)
-            {
-                for (int n = 1; n < 11; ++n)
-                {
-                    map[m][n] = map[m - 1][n];
-                    gotoXY(hOut, 2 * n, m);
-                    if (map[m][n] == 1)
-                    {
-                        cout << "¡ö";
-                    }
-                    else
-                    {
-                        cout << "  ";
-                    }
-                }
-            }
-            ++i;
-        }
-    }
-    gotoXY(hOut, 36, 1);
-    cout << fraction;
-    gotoXY(hOut, 36, 2);
-    cout << checkpoint;
 }
