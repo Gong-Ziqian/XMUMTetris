@@ -1,0 +1,262 @@
+#include<iostream>
+#include "player.h"
+#include <cstring>
+#include <cstdlib>
+using namespace std;
+
+#ifndef _BLOCK
+#include "block.h"
+#endif
+
+class Player {
+public:
+    Player();//initialize player
+    int getPoint();//get current point
+    void setPlayerName(std::string name);//set player's name
+    bool getStatus();//get current status
+    string getName();//get player's name
+    Block getNowBlock();//get current block
+    Block getNextBlock();//get next block
+    bool addBlock(int num);
+    bool detectCollision(Block block, int x, int y);//check crash: include block and block, block and board
+    int detectReductsion();//check deletion: add points
+    void detectIsFail();//check whether there are blocks on the top or not
+    void leftMoveBlock();//move block left
+    void rightMoveBlock();//move block right
+    bool moveDownBlock();//move block down
+    void turnBlock();//rotate the block
+    void setColor();//set color
+    void makeNewBlock();
+    int map[20][10];//game 
+    int getX();
+    int getY();
+    void restartPlayer();
+private:
+    string name;//player's name
+    int point;//point
+    Block tempBlock;//temporary block
+    Block blockNow;//current block
+    int posX;
+    int posY;//x,y block position
+    Block blockNext;//next block
+    bool fail;//whether fail or not
+};
+
+//initialize player
+Player::Player() {
+    point = 0;
+    fail = false;
+    memset(map, 0, sizeof(map));
+    blockNow.RandBlock();
+    blockNext.RandBlock();
+    name = "player";
+    posX=-3;
+    posY=4;
+}
+
+//restart
+void Player::restartPlayer() {
+    point = 0;
+    fail = false;
+    memset(map, 0, sizeof(map));
+    blockNow.RandBlock();
+    blockNext.RandBlock();
+    posX=-3;
+    posY=4;
+}
+
+//set name
+void Player::setPlayerName(string name) {
+    if(name.size() <= 10) {
+        this->name = name;
+    }
+    else {
+        ;
+    }
+}
+
+//get point
+int Player::getPoint() {
+    return point;
+}
+
+//get status
+bool Player::getStatus() {
+    return fail;
+}
+
+//check whether there are blocks on the top or not
+void Player::detectIsFail() {
+    for(int i = 0; i < 10; i++) {
+        if(this->map[0][i] == 1) {
+            fail = true;
+            return;
+        }
+    }
+}
+
+//get name
+string Player::getName() {
+    return name;
+}
+
+//get current block
+Block Player::getNowBlock() {
+    return blockNow;
+}
+
+//get next block
+Block Player::getNextBlock() {
+    return blockNext;
+}
+
+//check crash
+bool Player::detectCollision(Block block, int x, int y) {
+//if there is a crash, return false
+//if there is not, return true
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+//if the position of block is 1
+//check where it cross the boundary  or not first
+//then check whether the map position corresponding to  this position is also 1
+            if(block.block[i][j]==1) {
+                if(x + i >= 20 || y + j < 0 || y + j >= 10) {
+                    return false;
+                }
+                else if(map[x+i][y+j]==1 && x + i >=0) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+//move block left
+void Player::leftMoveBlock() {
+    if(detectCollision(blockNow, this->posX, this->posY-1)) {
+        this->posY--;
+    }
+}
+
+//move block right
+void Player::rightMoveBlock() {
+    if(detectCollision(blockNow, this->posX, this->posY+1)) {
+        this->posY++;
+    }
+}
+
+//move block down
+//if  there is a crash, fill the map
+//crash : return true
+//no crash: return false
+bool Player::moveDownBlock() {
+    if(detectCollision(blockNow, this->posX+1, this->posY)) {
+        this->posX++;
+        return false;
+    }
+    else {
+        for(int i = 0; i < 4; i++) {
+            for(int j = 0; j < 4; j++) {
+                if(posX + i >= 0 && posY + j >= 0 && posX + i < 20 && posY + j < 10 && blockNow.block[i][j] == 1) {
+                    map[posX+i][posY+j]=1;
+                }
+            }
+        }
+        return true;
+    }
+}
+
+//eliminate block
+int Player::detectReductsion() {
+    //record number of eliminated rows
+    int count = 0;
+    for(int i = 0; i < 20; i++) {
+      //record number of blocks of one row
+        int tempcount = 0;
+        for(int j = 0; j < 10; j++) {
+            if(map[i][j] == 1) {
+                tempcount++;
+            }
+        }
+        if(tempcount >= 10) {
+           //add point
+            point+=10;
+           //add eliminated rows
+            count++;
+            //move the rows above
+            for(int k=i;k>=1;k--) {
+                for(int j=0;j<10;j++) {
+                    map[k][j]=map[k-1][j];
+                }
+            }
+        }
+    }
+    return count;
+}
+
+//rotate the block
+void Player::turnBlock() {
+    tempBlock = blockNow;
+    blockNow.TurnBlock();
+    if(detectCollision(blockNow, posX, posY)) {
+        return; 
+    }
+    else {
+        blockNow = tempBlock;
+    }
+}
+
+//add block
+//add successfully: return true
+//add failed: return false
+bool Player::addBlock(int num) {
+    for(int i=0;i<num;i++) {
+        for(int t=0;t<10;t++) {
+            if(map[0][t]>0) {
+                fail = true;
+                return false;
+            }
+        }
+    //move the under rows 
+        for(int m=0; m<19; m++) {
+            for(int n=0; n<10; n++) {
+                map[m][n] = map[m+1][n];
+            }
+        }
+       //bottom zero clearing 
+        for(int j=0; j<10; j++) {
+            map[19][j] = 0;
+        }
+      //add randomly on the bottom 
+        for(int j=0; j<10; j++) {
+            map[19][rand()%10]++;
+        }
+        for(int j=0; j<10; j++) {
+            if(map[19][j]) {
+                map[19][j]=1;
+            }
+        }
+    }
+    return true;
+}
+
+//new block
+void Player::makeNewBlock() {
+    //confirm posX and posY
+    //assign new block
+    //create next block
+    posX=-3;
+    posY=4;
+    blockNow = blockNext;
+    blockNext.RandBlock();
+}
+
+int Player::getX() {
+    return posX;
+}
+
+
+int Player::getY() {
+    return posY;
+}
