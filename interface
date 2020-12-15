@@ -1,0 +1,246 @@
+#include <iostream>
+#include <cstring>
+#include <windows.h>//defines Windows specific functions that can be used
+#include <conio.h>
+using namespace std;
+
+class Interface {
+public:
+    Interface();
+    void initialWindow(HANDLE hOut); //initialize the window
+    void initialInterface(HANDLE hOut); //print the initial interface
+    void gotoXY(HANDLE hOut, int x, int y); //get the position of cursor
+    void printBlock(HANDLE hOut, int block[4][4], int x, int y); //print the blocks
+    void clearBlock(HANDLE hOut, int block[4][4], int x, int y); //delete the blocks
+    void gamePause(HANDLE hOut, int block[4][4]); //pause the game
+    void gameOver(HANDLE hOut, int block[4][4], int map[21][12]); //game over
+    void eliminateRow(HANDLE hOut, int map[21][12], int &val, int &fraction, int &checkpoint);//determine whether or not the rows can be eliminated and update the scores
+
+private:
+    HANDLE hOut; //=GetStdHandle(STD_OUTPUT_HANDLE);
+    int x, y;
+    int val, fraction, checkpoint;
+    int blockA[4][4]; //candidate block
+    int blockB[4][4]; //falling block
+};
+
+Interface::Interface(){ //get the output handle
+    hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+}
+
+void Interface::initialWindow(HANDLE hOut)
+{
+    SetConsoleTitle("XMUM Tetris");
+    COORD size = { 80, 25 };
+    SetConsoleScreenBufferSize(hOut, size);
+    SMALL_RECT rc = { 0, 0, 79, 24 };
+    SetConsoleWindowInfo(hOut, true, &rc);
+    CONSOLE_CURSOR_INFO cursor_info = { 1, 0 };
+    SetConsoleCursorInfo(hOut, &cursor_info);
+}
+
+void Interface::initialInterface(HANDLE hOut){
+    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); //set the font color and background color of the console window
+    for (int i = 0; i < 20; ++i)
+    {
+        cout << "■                    ■☆                      ☆" << endl;
+    }
+    gotoXY(hOut, 26, 0);
+    cout << "☆☆☆☆☆☆☆☆☆☆☆";
+    gotoXY(hOut, 0, 20);
+    cout << "■■■■■■■■■■■■☆☆☆☆☆☆☆☆☆☆☆☆☆";
+    gotoXY(hOut, 26, 1);
+    cout << "Score:      ";
+    gotoXY(hOut, 26, 2);
+    cout << "Checkpoint:      ";
+    gotoXY(hOut, 26, 4);
+    cout << "Next Block: ";
+    gotoXY(hOut, 26, 9);
+    cout << "Rules: ";
+    gotoXY(hOut, 30, 11);
+    cout << "↑：Rotate";
+    gotoXY(hOut, 30, 12);
+    cout << "↓：Speed up";
+    gotoXY(hOut, 30, 13);
+    cout << "→：Move right";
+    gotoXY(hOut, 30, 14);
+    cout << "←：Move left";
+    gotoXY(hOut, 30, 15);
+    cout << "Space: Pause";
+    gotoXY(hOut, 30, 16);
+    cout << "Esc: Exit";
+    gotoXY(hOut, 26, 17);
+}
+
+void Interface::gotoXY(HANDLE hOut, int x, int y){
+    COORD pos;
+    pos.X = x;
+    pos.Y = y;
+    SetConsoleCursorPosition(hOut, pos); //set the position of the cursor
+}
+
+void Interface::printBlock(HANDLE hOut, int block[4][4], int x, int y)
+{
+    switch (block[0][0])
+    {
+    case 10:
+    case 11:
+        SetConsoleTextAttribute(hOut, FOREGROUND_GREEN); //set the color of the "bar" block
+        break;
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+        SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        break;
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        break;
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        break;
+    case 24:
+    case 25:
+        SetConsoleTextAttribute(hOut, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+        break;
+    case 26:
+    case 27:
+        SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+        break;
+    case 28:
+        SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
+        break;
+    default:
+        break;
+    }
+    for (int i = 0; i < 4; ++i)
+    {
+        if (i + x >= 0)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                if (block[i][j] == 1)
+                {
+
+                    gotoXY(hOut, 2 * (y + j), x + i);
+                    cout << "¡ö";
+                }
+            }
+        }
+    }
+}
+
+void Interface::clearBlock(HANDLE hOut, int block[4][4], int x, int y)
+{
+    for (int i = 0; i < 4; ++i)
+    {
+        if (i + x >= 0)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                if (block[i][j] == 1)
+                {
+                    gotoXY(hOut, 2 * (y + j), x + i);
+                    cout << "  ";
+                }
+            }
+        }
+    }
+}
+
+void Interface::gameOver(HANDLE hOut, int block[4][4], int map[21][12])
+{
+    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
+    gotoXY(hOut, 8, 8);
+    cout << "GAME OVER";
+    gotoXY(hOut, 3, 9);
+    cout << "SPACE to play again";
+    gotoXY(hOut, 7, 10);
+    cout << "ESC to exit";
+    char key;
+    while (true)
+    {
+        key = _getch(); //read a character
+        if (key == 32) //space button
+        {
+            return;
+        }
+        if (key == 27) //esc button
+        {
+            exit(0);
+        }
+    }
+}
+
+void Interface::gamePause(HANDLE hOut, int block[4][4])
+{
+    clearBlock(hOut, block, 5, 15);
+    SetConsoleTextAttribute(hOut, FOREGROUND_RED | FOREGROUND_INTENSITY);
+    gotoXY(hOut, 30, 7);
+    cout << "PAUSE";
+    char key;
+    while (true)
+    {
+        key = _getch();
+        if (key == 32)
+        {
+            gotoXY(hOut, 30, 7);
+            cout << "        ";
+            printBlock(hOut, block, 5, 15);
+            return;
+        }
+        if (key == 27)
+        {
+            exit(0);
+        }
+    }
+}
+
+void Interface::eliminateRow(HANDLE hOut, int map[21][12], int &val, int &fraction, int &checkpoint)
+{
+    SetConsoleTextAttribute(hOut, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+    for (int i = 19; i >= 0; --i)
+    {
+        int x = 0;
+        for (int j = 1; j < 11; ++j)
+        {
+            x += map[i][j];
+        }
+        if (x == 10)
+        {
+            fraction += 100;
+            if (val > 1 && fraction / 1000 + 1 != checkpoint)
+            {
+                checkpoint = fraction / 1000 + 1;
+                val -= 5;
+            }
+            for (int m = i; m > 0; --m)
+            {
+                for (int n = 1; n < 11; ++n)
+                {
+                    map[m][n] = map[m - 1][n];
+                    gotoXY(hOut, 2 * n, m);
+                    if (map[m][n] == 1)
+                    {
+                        cout << "¡ö";
+                    }
+                    else
+                    {
+                        cout << "  ";
+                    }
+                }
+            }
+            ++i;
+        }
+    }
+    gotoXY(hOut, 36, 1);
+    cout << fraction;
+    gotoXY(hOut, 36, 2);
+    cout << checkpoint;
+}
